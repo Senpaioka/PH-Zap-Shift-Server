@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
+const bcrypt = require('bcrypt');
 
 // middleware
 require("dotenv").config();
@@ -56,6 +57,35 @@ const user_collection = database.collection("user");
 app.get("/", (req, res) => {
   res.json({ status: "ok", message: "ZapShift Server Active" });
 });
+
+
+// registering user
+app.post("/registration", async(req, res) => {
+
+  try {
+    const newUser = req.body;
+    const email = newUser.email;
+    const password = newUser.password;
+
+    // check if user already exists
+    const exists = await user_collection.findOne({email});
+    if (exists) {
+      return res.status(400).json({message: "User already exists."})
+    }
+
+    // hash password
+    const hashed_password = await bcrypt.hash(password, 10);
+
+    // insert data
+    const updateInfo = {...newUser, password: hashed_password};
+    await user_collection.insertOne(updateInfo);
+    res.status(201).json({message: "User registration successful."})
+  }
+  catch(error){
+    console.log(error.message);
+    res.status(500).json({ message: "Internal server error." });
+  }
+})
 
 
 //404
